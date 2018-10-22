@@ -1,5 +1,6 @@
 var rest = require('restler');
-var ms = require('ms')
+var ms = require('ms');
+var sc = require('./status_code');
 
 var kairos_prt = '32222';
 var kairos_url = 'http://nxn1.kube.nexpie.com:' +
@@ -39,6 +40,11 @@ var q_output = {
     }]
 }
 
+// status code output
+function status_output (status_code) {
+    return status_code + ': ' + sc.http_status[status_code];
+}
+
 // push
 function feed (data) {
     var device_id = data.key;
@@ -75,24 +81,22 @@ function feed (data) {
     }).on('timeout', function(ms) {
         console.log('not response in ' + ms + ' ms');
     }).on('complete', function(data, response) {
-        console.log('post status code: ' + response.statusCode);
+        console.log('post status code| ' + status_output(response.statusCode));
     })
 }
 
 // query 
 function get (q_data) {
-    var output = q_data;
-
     rest.post(kairos_url + 'api/v1/datapoints/query', {
         username: kairos_usr,
         password: kairos_pwd,
         timeout: 5000,
-        data: JSON.stringify(output)
+        data: JSON.stringify(q_data)
     }).on('timeout', function (ms) {
         console.log('not response in ' + ms + ' ms');
     }).on('complete', function (qres, response) {
         console.log('status code (qres): ' +
-            response.statusCode);
+            status_output(response.statusCode));
         console.dir(qres.queries[0].results[0].values);
     });
 }
