@@ -1,0 +1,23 @@
+{
+  "name": "krdb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "krdb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Doratong24/krdb.git"
+  },
+  "author": "Kornkitt P.",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Doratong24/krdb/issues"
+  },
+  "homepage": "https://github.com/Doratong24/krdb#readme",
+  "dependencies": {
+    "ms": "^2.1.1",
+    "restler": "^3.4.0"
+  }
+}
