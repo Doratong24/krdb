@@ -31,18 +31,13 @@ var input = {
 
 var q_output = {
     start_absolute: 1539939867893 - 3600000,
-    end_absoulte: 1539939867893 + 3600000,
+    end_absoulte: new Date().getTime(),
     metrics: [{
         name: "bd2w9fkc-bobclient",
         tags: {
             "attr": 'temp'
         }
     }]
-}
-
-// status code output
-function status_output (status_code) {
-    return status_code + ': ' + sc.http_status[status_code];
 }
 
 // push
@@ -81,7 +76,7 @@ function feed (data) {
     }).on('timeout', function(ms) {
         console.log('not response in ' + ms + ' ms');
     }).on('complete', function(data, response) {
-        console.log('post status code| ' + status_output(response.statusCode));
+        console.log('post status code| ' + sc.http_codeToStatus(response.statusCode));
     })
 }
 
@@ -96,7 +91,7 @@ function get (q_data) {
         console.log('not response in ' + ms + ' ms');
     }).on('complete', function (qres, response) {
         console.log('status code (qres): ' +
-            status_output(response.statusCode));
+            sc.http_codeToStatus(response.statusCode));
         console.dir(qres.queries[0].results[0].values);
     });
 }

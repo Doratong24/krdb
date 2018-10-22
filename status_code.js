@@ -42,4 +42,6 @@ const http_status = {
     '505': 'HTTP Version Not Supported',
 };
 
-exports.http_status = http_status;
+exports.http_codeToStatus = function (status_code) {
+    return status_code + ': ' + http_status[status_code];
+};
