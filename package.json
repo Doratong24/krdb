@@ -18,6 +18,11 @@
   "homepage": "https://github.com/Doratong24/krdb#readme",
   "dependencies": {
     "ms": "^2.1.1",
-    "restler": "^3.4.0"
+    "node-chartist": "^1.0.5",
+    "plotly": "^1.0.6",
+    "plotly.js-dist": "^1.42.1",
+    "restify": "^7.2.1",
+    "restler": "^3.4.0",
+    "vis": "^4.21.0"
   }
 }
