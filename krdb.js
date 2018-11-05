@@ -10,6 +10,8 @@ var kairos_url = 'http://' + kairos_usr + ":" + kairos_pwd +
     '@nxn1.kube.nexpie.com:' +
     kairos_prt + '/';
 
+var range_input = ['raw', '1h', '1d', '1w', '1m', '1y'];
+
 var input = {
     key: '__testdevice',
     ts: new Date().getTime(),
@@ -25,6 +27,60 @@ var input = {
             type: 'number',
             arg: { gap: '30s', duration: '7d' }
         }]
+}
+
+/**
+ * Decrease a range of timeframe for one step back
+ * to make a summary of an updated data query
+ * @param {string} range - a timeframe range
+ */
+function decrease_range_for_shown(range) {
+    if (range == '1h') return 'raw';
+    else if (range == '1d') return 'raw';
+    else if (range == '1w') return '1h';
+    else if (range == '1m') return '1h';
+    else if (range == '1y') return '1d';
+    else return 'raw';
+}
+
+/**
+ * Decrease a range of timeframe for one step back
+ * to make a summary of an updated data query
+ * @param {string} range - a timeframe range
+ */
+function decrease_range(range) {
+    var index = range_input.indexOf(range);
+    if (index > 0) return range_input[index - 1];
+    else return range_input[0];
+}
+
+function query_generator(device_id, range, qtype, endtime) {
+    var mls = ms(validateRange(range));
+    var now = endtime ? endtime : new Date().getTime()
+    var q_data = {
+        start_absolute:
+            now - ms(validateRange(range)),
+        end_absoulte: now,
+        metrics: [{
+            name: device_id,
+            group_by: [{
+                name: "tag",
+                tags: qtype ? ["attr"] : ["attr", "range_tag"]
+            }],
+            tags: qtype ? {
+                range_tag: decrease_range(range)
+            } : {},
+            aggregators: qtype ? [{
+                name: qtype ? qtype : '',
+                sampling: {
+                    value: mls,
+                    unit: "milliseconds"
+                }
+            }] : []
+        }]
+    }
+    console.log(qtype + ' | ' + q_data.metrics[0]);
+    return q_data;
 }
 
 /**
@@ -84,42 +140,13 @@ function feed(data, tag) {
 }
 
 /**
- * Decrease a range of timeframe for one step back
- * to make a summary of an updated data query
- * @param {string} range - a timeframe range
- */
-function decrease_range_for_shown(range) {
-    if (range == '1h') return 'raw';
-    else if (range == '1d') return 'raw';
-    else if (range == '1w') return '1h';
-    else if (range == '1m') return '1h';
-    else if (range == '1y') return '1d';
-    else return 'raw';
-}
-
-/**
- * Decrease a range of timeframe for one step back
- * to make a summary of an updated data query
- * @param {string} range - a timeframe range
- */
-function decrease_range_for_average(range) {
-    if (range == '1h') return 'raw';
-    else if (range == '1d') return '1h';
-    else if (range == '1w') return '1d';
-    else if (range == '1m') return '1w';
-    else if (range == '1y') return '1m';
-    else return 'raw';
-}
-
-/**
  * To check if the range is validate or not
  * since 1m in ms package means 1 minute, not one month
  * So it should convert 1m to 4w (4 weeks) instead to represent one month
  * @param {string} range - a value for validatation
  */
 function validateRange(range) {
-    var valid = ['raw', '1h', '1d', '1w', '1m', '1y'];
-    if (valid.indexOf(range) == -1) return 'raw';
+    if (range_input.indexOf(range) == -1) return 'raw';
     else if (range == '1m') return '4w';
     else return range;
 }
@@ -130,23 +157,8 @@ function validateRange(range) {
  * @param {string} range - the specify range for query the result, 
  *                      can be chosen between 'raw', '1d', '1w', '1m', and '1y'
  */
-function get_query(device_id, range) {
-    var now = new Date().getTime()
-    var q_data = {
-        start_absolute:
-            now - ms(validateRange(range)),
-        end_absoulte: now,
-        metrics: [{
-            group_by: [{
-                name: "tag",
-                tags: ["attr", "range_tag"]
-            }],
-            tags: { range_tag: decrease_range_for_shown(range) },
-            name: device_id
-        }]
-    }
-
-    console.log(q_data);
+function getfeed(device_id, range) {
+    var q_data = query_generator(device_id, range);
 
     rest.get(kairos_url +
         'api/v1/datapoints/query?query=' +
@@ -154,7 +166,7 @@ function get_query(device_id, range) {
     ).on('complete', function (qres, response) {
         console.log('status code (qres): ' +
             sc.http_codeToStatus(response.statusCode));
-        console.dir(qres.queries[0].results);
+        // console.dir(qres.queries[0].results);
         var res = qres.queries[0].results;
         for (var i = 0; i < res.length; i++) {
             var t_graph = [], v_graph = [];
@@ -226,6 +238,7 @@ function update_query(device_id, qres, range) {
  * @param {string} range - range for search to query data
  */
 function get_query_for_update(device_id, q_data, range) {
+    console.log(range);
     rest.get(kairos_url +
         'api/v1/datapoints/query?query=' +
         JSON.stringify(q_data)
@@ -249,33 +262,9 @@ function get_query_for_update(device_id, q_data, range) {
  * @param {string} range - an updated range
  * @param {number} qtime - a time that need to query, must be the latest
  */
-function summary(device_id, range, qtime) {
-    var mls = ms(validateRange(range));
-
-    var now = qtime ? qtime : new Date().getTime();
-    var ave_metric = {
-        metrics: [{
-            tags: {
-                range_tag: decrease_range_for_average(range)
-            },
-            name: device_id,
-            group_by: [{
-                "name": "tag",
-                "tags": ["attr"]
-            }],
-            aggregators: [{
-                name: "avg",
-                sampling: {
-                    value: mls,
-                    unit: "milliseconds"
-                }
-            }]
-        }],
-        start_absolute: now - ms(range),
-        end_absoulte: now,
-    };
-    console.log("update start.. " + mls + ' ms');
-    get_query_for_update(device_id, ave_metric, range);
+function summary(device_id, range, qtype='avg', qtime) {
+    var met = query_generator(device_id, range, qtype, qtime);
+    get_query_for_update(device_id, met, range);
 }
 
 /**
@@ -283,8 +272,9 @@ function summary(device_id, range, qtime) {
  */
 function run_all() {
     // feed(input);
-    // get_query('__testdevice', '1d');
-    summary('__testdevice', '1h');
+    // getfeed('__testdevice', '1h');
+    summary('__testdevice', '1h', 'avg');
 }
 
 run_all();
+
